@@ -1,11 +1,11 @@
 {
-	"required": true,
-	"package": "com.jomlom.recipebookaccess.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"mixins": [
-		"ExampleMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	}
+  "required": true,
+  "package": "com.jomlom.recipebookaccess.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "InputSlotFillerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
