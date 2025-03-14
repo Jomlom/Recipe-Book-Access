@@ -2,7 +2,6 @@ package com.jomlom.recipebookaccess.util;
 
 import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
 import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -13,6 +12,7 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 public class RecipeBookAccessUtils {
 
@@ -24,7 +24,13 @@ public class RecipeBookAccessUtils {
         }
     }
 
-    public static int customFillInputSlot(Slot slot, RegistryEntry<Item> item, int count, PlayerInventory playerInventory, RecipeBookInventoryProvider customPop) {
+    public static void populateCustomRecipeFinder(RecipeFinder recipeFinder, List<ItemStack> items) {
+        for (ItemStack itemStack : items){
+            recipeFinder.addInput(itemStack);
+        }
+    }
+
+    public static int customFillInputSlot(Slot slot, RegistryEntry<Item> item, int count, RecipeBookInventoryProvider customPop) {
         ItemStack slotStack = slot.getStack();
 
         for (Inventory inv : customPop.getInventoriesForAutofill()) {

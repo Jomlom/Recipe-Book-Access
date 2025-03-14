@@ -28,9 +28,6 @@ public abstract class InputSlotFillerMixin {
     @Final
     @Shadow
     private InputSlotFiller.Handler<?> handler;
-    @Final
-    @Shadow
-    private PlayerInventory inventory;
 
     @Redirect(
             method = "fill(Lnet/minecraft/recipe/InputSlotFiller$Handler;IILjava/util/List;Ljava/util/List;Lnet/minecraft/entity/player/PlayerInventory;Lnet/minecraft/recipe/RecipeEntry;ZZ)Lnet/minecraft/screen/AbstractRecipeScreenHandler$PostFillAction;",
@@ -64,7 +61,7 @@ public abstract class InputSlotFillerMixin {
     private void onFillInputSlot(Slot slot, RegistryEntry<Item> item, int count, CallbackInfoReturnable<Integer> cir) {
         ScreenHandler screenHandler = RecipeBookAccessUtils.getOuterScreenHandler(handler);
         if (screenHandler instanceof RecipeBookInventoryProvider customPop) {
-            int customResult = RecipeBookAccessUtils.customFillInputSlot(slot, item, count, inventory, customPop);
+            int customResult = RecipeBookAccessUtils.customFillInputSlot(slot, item, count, customPop);
             cir.setReturnValue(customResult);
         }
     }
