@@ -11,6 +11,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.RecipeFinder;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
@@ -42,27 +43,24 @@ public abstract class RecipeBookWidgetMixin {
 		redirect(inventory, recipeFinder);
 	}
 
+	@Unique
 	private void redirect(PlayerInventory inventory, RecipeFinder recipeFinder) {
 		RecipeBookWidget<?> widget = (RecipeBookWidget<?>)(Object)this;
-		try {
-			Field field = RecipeBookWidget.class.getDeclaredField("craftingScreenHandler");
-			field.setAccessible(true);
-			AbstractRecipeScreenHandler handler =
-					(AbstractRecipeScreenHandler) field.get(widget);
-			if (handler instanceof RecipeBookInventoryProvider) {
-				ClientPlayNetworking.send(new RequestItemsPayload(1));
-				System.out.println("sent request to server");
-				ClientItemsReciever.setOnUpdate(() -> {
-					List<ItemStack> updatedItems = ClientItemsReciever.getItemStacks();
-					RecipeBookAccessUtils.populateCustomRecipeFinder(recipeFinder, updatedItems);
-					widget.refresh();
-				});
-			} else {
-				inventory.populateRecipeFinder(recipeFinder);
-			}
-		} catch (NoSuchFieldException | IllegalAccessException e) {
+
+		AbstractRecipeScreenHandler handler =
+				((RecipeBookWidgetAccessor)widget).getCraftingScreenHandler();
+
+		if (handler instanceof RecipeBookInventoryProvider) {
+			ClientPlayNetworking.send(new RequestItemsPayload(1));
+			ClientItemsReciever.setOnUpdate(() -> {
+				List<ItemStack> updatedItems = ClientItemsReciever.getItemStacks();
+				RecipeBookAccessUtils.populateCustomRecipeFinder(recipeFinder, updatedItems);
+				widget.refresh();
+			});
+		} else {
 			inventory.populateRecipeFinder(recipeFinder);
 		}
 	}
+
 
 }

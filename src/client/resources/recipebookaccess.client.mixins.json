@@ -3,6 +3,7 @@
   "package": "com.jomlom.recipebookaccess.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "RecipeBookWidgetAccessor",
     "RecipeBookWidgetMixin"
   ],
   "injectors": {
