@@ -24,6 +24,7 @@ public class ServerRequestReciever {
                     }
                 }
             }
+            items.removeIf(ItemStack::isEmpty);
             System.out.println("sending items to player - items: " + items.size());
             ServerPlayNetworking.send(player, new CustomItemsPayload(items));
         }

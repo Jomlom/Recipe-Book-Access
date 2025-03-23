@@ -7,9 +7,16 @@ import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.network.packet.CustomPayload;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public record  CustomItemsPayload(List<ItemStack> itemStacks) implements CustomPayload {
 
+    public CustomItemsPayload {
+        itemStacks = itemStacks.stream()
+                .filter(stack -> !stack.isEmpty())
+                .collect(Collectors.toList());
+    }
+    
     public static final CustomPayload.Id<CustomItemsPayload> ID = new CustomPayload.Id<>(NetworkConstants.ITEMS_PACKET_ID);
 
     public static final PacketCodec<RegistryByteBuf, CustomItemsPayload> CODEC =
