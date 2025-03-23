@@ -26,7 +26,7 @@ repositories {
 dependencies {
     // existing dependencies block
 
-    modImplementation("maven.modrinth:recipe-book-access:<mod_version>")
+    modImplementation("maven.modrinth:recipe-book-access-api:<mod_version>")
 }
 ```
 Replace `<mod_version>` with the version number of Recipe Book Access you wish to use (e.g. `1.0.0`).
