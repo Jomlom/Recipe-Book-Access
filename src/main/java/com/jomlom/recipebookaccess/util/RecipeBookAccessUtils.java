@@ -3,10 +3,15 @@ package com.jomlom.recipebookaccess.util;
 import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeMatcher;
+import net.minecraft.recipe.InputSlotFiller;
+import net.minecraft.recipe.RecipeFinder;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +20,7 @@ public class RecipeBookAccessUtils {
 
     private static final Map<Slot, Inventory> originMap = new HashMap<>();
 
-    public static void populateCustomRecipeFinder(RecipeMatcher recipeFinder, RecipeBookInventoryProvider customPopulator) {
+    public static void populateCustomRecipeFinder(RecipeFinder recipeFinder, RecipeBookInventoryProvider customPopulator) {
         for (Inventory inventory : customPopulator.getInventoriesForAutofill()) {
             for (int i = 0; i < inventory.size(); i++) {
                 recipeFinder.addInput(inventory.getStack(i));
@@ -23,17 +28,17 @@ public class RecipeBookAccessUtils {
         }
     }
 
-    public static void populateCustomRecipeFinder(RecipeMatcher recipeFinder, List<ItemStack> items) {
+    public static void populateCustomRecipeFinder(RecipeFinder recipeFinder, List<ItemStack> items) {
         for (ItemStack itemStack : items) {
             recipeFinder.addInput(itemStack);
         }
     }
 
-    public static int customFillInputSlot(Slot slot, ItemStack stack, int count, RecipeBookInventoryProvider customPop) {
+    public static int customFillInputSlot(Slot slot, RegistryEntry<Item> item, int count, RecipeBookInventoryProvider customPop) {
         ItemStack slotStack = slot.getStack();
 
         for (Inventory inv : customPop.getInventoriesForAutofill()) {
-            int matchingIndex = getMatchingSlotForInventory(inv, stack, slotStack);
+            int matchingIndex = getMatchingSlotForInventory(inv, item, slotStack);
             if (matchingIndex != -1) {
                 originMap.put(slot, inv);
 
@@ -57,11 +62,11 @@ public class RecipeBookAccessUtils {
         return -1;
     }
 
-    private static int getMatchingSlotForInventory(Inventory inv, ItemStack item, ItemStack stack) {
+    private static int getMatchingSlotForInventory(Inventory inv, RegistryEntry<Item> item, ItemStack stack) {
         for (int i = 0; i < inv.size(); ++i) {
             ItemStack currentStack = inv.getStack(i);
             if (!currentStack.isEmpty()
-                    && currentStack.itemMatches(item.getRegistryEntry())
+                    && currentStack.itemMatches(item)
                     && usableWhenFillingSlot(stack)
                     && (stack.isEmpty() || ItemStack.areItemsAndComponentsEqual(stack, currentStack))) {
                 return i;
@@ -72,6 +77,22 @@ public class RecipeBookAccessUtils {
 
     private static boolean usableWhenFillingSlot(ItemStack stack) {
         return !stack.isDamaged() && !stack.hasEnchantments() && !stack.contains(DataComponentTypes.CUSTOM_NAME);
+    }
+
+    public static ScreenHandler getOuterScreenHandler(InputSlotFiller.Handler<?> handler) {
+        Class<?> clazz = handler.getClass();
+        for (Field f : clazz.getDeclaredFields()) {
+            f.setAccessible(true);
+            try {
+                Object value = f.get(handler);
+                if (value instanceof ScreenHandler screenHandler) {
+                    return screenHandler;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     public static boolean tryReturnItemToOrigin(Slot slot, ItemStack stack) {

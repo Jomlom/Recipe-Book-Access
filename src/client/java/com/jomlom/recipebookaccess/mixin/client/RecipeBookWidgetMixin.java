@@ -8,13 +8,14 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeMatcher;
+import net.minecraft.recipe.RecipeFinder;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 @Mixin(RecipeBookWidget.class)
@@ -24,10 +25,10 @@ public abstract class RecipeBookWidgetMixin {
 			method = "refreshInputs",
 			at = @At(
 					value = "INVOKE",
-					target = "Lnet/minecraft/entity/player/PlayerInventory;populateRecipeFinder(Lnet/minecraft/recipe/RecipeMatcher;)V"
+					target = "Lnet/minecraft/entity/player/PlayerInventory;populateRecipeFinder(Lnet/minecraft/recipe/RecipeFinder;)V"
 			)
 	)
-	private void redirectPopulateRecipeFinderRefresh(PlayerInventory inventory, RecipeMatcher recipeFinder) {
+	private void redirectPopulateRecipeFinderRefresh(PlayerInventory inventory, RecipeFinder recipeFinder) {
 		redirect(inventory, recipeFinder);
 	}
 
@@ -35,16 +36,16 @@ public abstract class RecipeBookWidgetMixin {
 			method = "reset",
 			at = @At(
 					value = "INVOKE",
-					target = "Lnet/minecraft/entity/player/PlayerInventory;populateRecipeFinder(Lnet/minecraft/recipe/RecipeMatcher;)V"
+					target = "Lnet/minecraft/entity/player/PlayerInventory;populateRecipeFinder(Lnet/minecraft/recipe/RecipeFinder;)V"
 			)
 	)
-	private void redirectPopulateRecipeFinderReset(PlayerInventory inventory, RecipeMatcher recipeFinder) {
+	private void redirectPopulateRecipeFinderReset(PlayerInventory inventory, RecipeFinder recipeFinder) {
 		redirect(inventory, recipeFinder);
 	}
 
 	@Unique
-	private void redirect(PlayerInventory inventory, RecipeMatcher recipeFinder) {
-		RecipeBookWidget widget = (RecipeBookWidget)(Object)this;
+	private void redirect(PlayerInventory inventory, RecipeFinder recipeFinder) {
+		RecipeBookWidget<?> widget = (RecipeBookWidget<?>)(Object)this;
 
 		AbstractRecipeScreenHandler handler =
 				((RecipeBookWidgetAccessor)widget).getCraftingScreenHandler();
