@@ -4,7 +4,7 @@ import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
 import com.jomlom.recipebookaccess.util.RecipeBookAccessUtils;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.screen.CraftingScreenHandler;
+import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -23,7 +23,7 @@ public abstract class ScreenHandlerMixin {
     private void onClosedInject(PlayerEntity player, CallbackInfo ci) {
         if (!(player instanceof ServerPlayerEntity)) return;
         ScreenHandler handler = (ScreenHandler) (Object) this;
-        if (handler instanceof CraftingScreenHandler screenHandler && screenHandler instanceof RecipeBookInventoryProvider customPop) {
+        if (handler instanceof AbstractRecipeScreenHandler screenHandler && screenHandler instanceof RecipeBookInventoryProvider customPop) {
             if (!customPop.persistentInventory()) {
                 for (Slot slot : screenHandler.slots.subList(
                         customPop.inputSlotsStartIndex(),
