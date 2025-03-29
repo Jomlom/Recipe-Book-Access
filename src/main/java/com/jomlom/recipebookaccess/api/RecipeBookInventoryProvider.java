@@ -11,4 +11,12 @@ public interface RecipeBookInventoryProvider {
         return false;
     }
 
+    default int inputSlotsStartIndex() {
+        return 1;
+    }
+
+    default int inputSlotsEndIndex() {
+        return 10;
+    }
+
 }

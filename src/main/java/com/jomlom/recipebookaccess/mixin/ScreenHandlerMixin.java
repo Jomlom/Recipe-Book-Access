@@ -26,8 +26,9 @@ public abstract class ScreenHandlerMixin {
         if (handler instanceof CraftingScreenHandler screenHandler && screenHandler instanceof RecipeBookInventoryProvider customPop) {
             if (!customPop.persistentInventory()) {
                 for (Slot slot : screenHandler.slots.subList(
-                        screenHandler.getCraftingResultSlotIndex()+1,
-                        screenHandler.getCraftingResultSlotIndex()+screenHandler.getCraftingHeight()*screenHandler.getCraftingWidth())
+                        customPop.inputSlotsStartIndex(),
+                        customPop.inputSlotsEndIndex()
+                )
                 ) {
                     ItemStack stack = slot.getStack().copy();
                     boolean returned = RecipeBookAccessUtils.tryReturnItemToOrigin(slot, stack);
