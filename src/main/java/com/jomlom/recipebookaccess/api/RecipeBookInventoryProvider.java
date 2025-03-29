@@ -7,4 +7,8 @@ public interface RecipeBookInventoryProvider {
 
     List<Inventory> getInventoriesForAutofill();
 
+    default boolean persistentInventory() {
+        return false;
+    }
+
 }

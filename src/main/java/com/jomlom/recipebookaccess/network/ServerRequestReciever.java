@@ -12,7 +12,6 @@ import java.util.List;
 public class ServerRequestReciever {
 
     public static void handleRequest(ServerPlayerEntity player) {
-        System.out.println("recieved request from player!");
         ScreenHandler handler = player.currentScreenHandler;
         if (handler instanceof RecipeBookInventoryProvider customPop){
             List<Inventory> inventories = customPop.getInventoriesForAutofill();
@@ -25,7 +24,6 @@ public class ServerRequestReciever {
                 }
             }
             items.removeIf(ItemStack::isEmpty);
-            System.out.println("sending items to player - items: " + items.size());
             ServerPlayNetworking.send(player, new CustomItemsPayload(items));
         }
     }
