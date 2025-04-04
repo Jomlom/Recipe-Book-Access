@@ -1,33 +1,40 @@
 package com.jomlom.recipebookaccess.network;
 
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.Identifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record  CustomItemsPayload(List<ItemStack> itemStacks) implements CustomPayload {
+public class CustomItemsPayload {
+    private final List<ItemStack> itemStacks;
 
-    public CustomItemsPayload {
-        itemStacks = itemStacks.stream()
+    public static final Identifier ID = NetworkConstants.ITEMS_PACKET_ID;
+
+    public CustomItemsPayload(List<ItemStack> itemStacks) {
+        this.itemStacks = itemStacks.stream()
                 .filter(stack -> !stack.isEmpty())
                 .collect(Collectors.toList());
     }
-    
-    public static final CustomPayload.Id<CustomItemsPayload> ID = new CustomPayload.Id<>(NetworkConstants.ITEMS_PACKET_ID);
 
-    public static final PacketCodec<RegistryByteBuf, CustomItemsPayload> CODEC =
-            PacketCodec.tuple(
-                PacketCodecs.collection(ArrayList::new, ItemStack.PACKET_CODEC),
-                CustomItemsPayload::itemStacks,
-                CustomItemsPayload::new
-            );
+    public List<ItemStack> getItemStacks() {
+        return itemStacks;
+    }
 
-    @Override
-    public Id<? extends CustomPayload> getId() {
-        return ID;
+    public static void encode(CustomItemsPayload payload, PacketByteBuf buf) {
+        buf.writeInt(payload.itemStacks.size());
+        for (ItemStack stack : payload.itemStacks) {
+            buf.writeItemStack(stack);
+        }
+    }
+
+    public static CustomItemsPayload decode(PacketByteBuf buf) {
+        int size = buf.readInt();
+        List<ItemStack> stacks = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            stacks.add(buf.readItemStack());
+        }
+        return new CustomItemsPayload(stacks);
     }
 }

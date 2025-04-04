@@ -1,7 +1,6 @@
 package com.jomlom.recipebookaccess.util;
 
 import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
-import net.minecraft.component.DataComponentTypes;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.RecipeMatcher;
@@ -63,7 +62,7 @@ public class RecipeBookAccessUtils {
             if (!currentStack.isEmpty()
                     && currentStack.itemMatches(item.getRegistryEntry())
                     && usableWhenFillingSlot(stack)
-                    && (stack.isEmpty() || ItemStack.areItemsAndComponentsEqual(stack, currentStack))) {
+                    && (stack.isEmpty() || ItemStack.areItemsEqual(stack, currentStack))) {
                 return i;
             }
         }
@@ -71,7 +70,7 @@ public class RecipeBookAccessUtils {
     }
 
     private static boolean usableWhenFillingSlot(ItemStack stack) {
-        return !stack.isDamaged() && !stack.hasEnchantments() && !stack.contains(DataComponentTypes.CUSTOM_NAME);
+        return !stack.isDamaged() && !stack.hasEnchantments() && !stack.hasCustomName();
     }
 
     public static boolean tryReturnItemToOrigin(Slot slot, ItemStack stack) {
@@ -87,7 +86,7 @@ public class RecipeBookAccessUtils {
     private static boolean insertStackIntoInventory(Inventory inv, ItemStack stack) {
         for (int i = 0; i < inv.size(); i++) {
             ItemStack invStack = inv.getStack(i);
-            if (!invStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(invStack, stack)) {
+            if (!invStack.isEmpty() && ItemStack.areItemsEqual(invStack, stack)) {
                 int maxStackSize = Math.min(invStack.getMaxCount(), stack.getMaxCount());
                 int availableSpace = maxStackSize - invStack.getCount();
                 if (availableSpace > 0) {

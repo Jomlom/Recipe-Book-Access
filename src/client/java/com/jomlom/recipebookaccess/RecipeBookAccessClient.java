@@ -9,9 +9,10 @@ public class RecipeBookAccessClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 
-		ClientPlayNetworking.registerGlobalReceiver(CustomItemsPayload.ID, (payload, context) -> {
-			context.client().execute(() -> {
-				ClientItemsReciever.recieveItems(context.client(), payload.itemStacks());
+		ClientPlayNetworking.registerGlobalReceiver(CustomItemsPayload.ID, (client, handler, buf, responseSender) -> {
+			CustomItemsPayload payload = CustomItemsPayload.decode(buf);
+			client.execute(() -> {
+				ClientItemsReciever.recieveItems(client, payload.getItemStacks());
 			});
 		});
 

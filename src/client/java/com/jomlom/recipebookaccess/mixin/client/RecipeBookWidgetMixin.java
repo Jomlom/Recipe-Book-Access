@@ -5,9 +5,11 @@ import com.jomlom.recipebookaccess.network.ClientItemsReciever;
 import com.jomlom.recipebookaccess.network.RequestItemsPayload;
 import com.jomlom.recipebookaccess.util.RecipeBookAccessUtils;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
 import org.spongepowered.asm.mixin.Mixin;
@@ -50,7 +52,10 @@ public abstract class RecipeBookWidgetMixin {
 				((RecipeBookWidgetAccessor)widget).getCraftingScreenHandler();
 
 		if (handler instanceof RecipeBookInventoryProvider) {
-			ClientPlayNetworking.send(new RequestItemsPayload(1));
+			PacketByteBuf buf = PacketByteBufs.create();
+			RequestItemsPayload payload = new RequestItemsPayload(1);
+			RequestItemsPayload.encode(payload, buf);
+			ClientPlayNetworking.send(RequestItemsPayload.ID, buf);
 			ClientItemsReciever.setOnUpdate(() -> {
 				List<ItemStack> updatedItems = ClientItemsReciever.getItemStacks();
 				RecipeBookAccessUtils.populateCustomRecipeFinder(recipeFinder, updatedItems);
