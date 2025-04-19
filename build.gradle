@@ -1,6 +1,7 @@
 plugins {
 	id 'fabric-loom' version '1.10-SNAPSHOT'
 	id 'maven-publish'
+	id "com.github.johnrengelman.shadow" version "7.1.2"
 }
 
 version = project.mod_version
@@ -11,11 +12,10 @@ base {
 }
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
+	mavenCentral()
+	maven {
+		url = "https://maven.blamejared.com"
+	}
 }
 
 loom {
@@ -38,7 +38,11 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	
+
+	// JEI compat
+	modImplementation("mezz.jei:jei-1.20.1-fabric:15.20.0.101") {
+		transitive = false
+	}
 }
 
 processResources {

@@ -4,11 +4,9 @@ import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
 import com.jomlom.recipebookaccess.util.RecipeBookAccessUtils;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.screen.slot.Slot;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.inventory.Inventory;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -16,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(targets = "net.minecraft.recipe.InputSlotFiller")
 public abstract class InputSlotFillerMixin<C extends Inventory> {

@@ -3,8 +3,8 @@
   "package": "com.jomlom.recipebookaccess.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "ScreenHandlerMixin",
-    "InputSlotFillerMixin"
+    "InputSlotFillerMixin",
+    "ScreenHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
