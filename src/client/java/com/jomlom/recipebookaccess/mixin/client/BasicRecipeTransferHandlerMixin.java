@@ -9,7 +9,9 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IStackHelper;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.recipe.transfer.IRecipeTransferInfo;
+import mezz.jei.common.network.IConnectionToServer;
 import mezz.jei.common.transfer.RecipeTransferOperationsResult;
 import mezz.jei.common.transfer.RecipeTransferUtil;
 import mezz.jei.library.transfer.BasicRecipeTransferHandler;
@@ -18,9 +20,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeEntry;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,62 +30,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Mixin(value = BasicRecipeTransferHandler.class, remap = false)
-public class BasicRecipeTransferHandlerMixin {
+public abstract class BasicRecipeTransferHandlerMixin {
 
-    @Shadow @Final private IStackHelper stackHelper;
-    @Shadow @Final private IRecipeTransferInfo<?, ?> transferInfo;
-
-    @Inject(
-            method = "getInventoryState(Ljava/util/Collection;Ljava/util/Collection;Lnet/minecraft/entity/player/PlayerEntity;Lnet/minecraft/screen/ScreenHandler;Lmezz/jei/api/recipe/transfer/IRecipeTransferInfo;)Lmezz/jei/library/transfer/BasicRecipeTransferHandler$InventoryState;",
-            at = @At("RETURN"),
-            cancellable = true
-    )
-    private static <C extends ScreenHandler, R> void onGetInventoryState(
-            Collection<Slot> craftingSlots,
-            Collection<Slot> inventorySlots,
-            PlayerEntity player,
-            C container,
-            IRecipeTransferInfo<C, R> transferInfo,
-            CallbackInfoReturnable<BasicRecipeTransferHandler.InventoryState> cir
-    ) {
-        ClientPlayNetworking.send(new RequestItemsPayload(1));
-        BasicRecipeTransferHandler.InventoryState original = cir.getReturnValue();
-        if (original == null) {
-            return;
-        }
-
-        try {
-            List<ItemStack> snapshot = ClientItemsReciever.getItemStacks();
-            if (snapshot.isEmpty()) {
-                return;
-            }
-
-            Inventory virtInv = new VirtualInventory(snapshot);
-
-            Map<Slot, ItemStack> newMap = new HashMap<>();
-            int added = 0;
-            for (int i = 0; i < virtInv.size(); i++) {
-                ItemStack s = virtInv.getStack(i);
-                if (!s.isEmpty()) {
-                    Slot virtualSlot = new VirtualSlot(virtInv, i);
-                    newMap.put(virtualSlot, s.copy());
-                    added++;
-                }
-            }
-
-            cir.setReturnValue(new BasicRecipeTransferHandler.InventoryState(
-                    newMap,
-                    original.filledCraftSlotCount(),
-                    original.emptySlotCount()
-            ));
-            System.out.println("[NearbyJEI] Overrode JEI client inventory, added " + added + " stacks");
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-    }
+    @Final @Shadow private IConnectionToServer serverConnection;
+    @Final @Shadow private IStackHelper stackHelper;
+    @Final @Shadow private IRecipeTransferHandlerHelper handlerHelper;
+    @Final @Shadow private IRecipeTransferInfo<?, ?> transferInfo;
 
     @Inject(
             method = "transferRecipe",
@@ -91,48 +49,98 @@ public class BasicRecipeTransferHandlerMixin {
             cancellable = true
     )
     private <C extends ScreenHandler, R> void onTransferRecipe(
-            C container, R recipe, IRecipeSlotsView recipeSlotsView, PlayerEntity player, boolean maxTransfer, boolean doTransfer, CallbackInfoReturnable<IRecipeTransferError> cir
+            C container,
+            R recipe,
+            IRecipeSlotsView recipeSlotsView,
+            PlayerEntity player,
+            boolean maxTransfer,
+            boolean doTransfer,
+            CallbackInfoReturnable<IRecipeTransferError> cir
     ) {
 
-        if (!doTransfer) return;
+        ClientPlayNetworking.send(new RequestItemsPayload(1));
 
+        if (!serverConnection.isJeiOnServer()) {
+            Text tooltipMessage = Text.translatable("jei.tooltip.error.recipe.transfer.no.server");
+            cir.setReturnValue(this.handlerHelper.createUserErrorWithTooltip(tooltipMessage));
+            return;
+        }
 
-        @SuppressWarnings("unchecked")
         IRecipeTransferInfo<ScreenHandler, Object> castedInfo = (IRecipeTransferInfo<ScreenHandler, Object>) transferInfo;
+
+        if (!castedInfo.canHandle(container, recipe)) {
+            IRecipeTransferError error = castedInfo.getHandlingError(container, recipe);
+            cir.setReturnValue(error != null
+                    ? error
+                    : this.handlerHelper.createInternalError()
+            );
+            return;
+        }
 
         List<Slot> craftingSlots = Collections.unmodifiableList(castedInfo.getRecipeSlots(container, recipe));
         List<Slot> inventorySlots = Collections.unmodifiableList(castedInfo.getInventorySlots(container, recipe));
         List<IRecipeSlotView> inputSlots = recipeSlotsView.getSlotViews(RecipeIngredientRole.INPUT);
 
-        BasicRecipeTransferHandler.InventoryState invState = BasicRecipeTransferHandler.getInventoryState(
-                craftingSlots, inventorySlots, player, container, castedInfo
+        List<ItemStack> snapshot = ClientItemsReciever.getItemStacks();
+        if (snapshot == null || snapshot.isEmpty()) {
+            cir.setReturnValue(this.handlerHelper.createInternalError());
+            return;
+        }
+
+        Inventory virtInv = new VirtualInventory(snapshot);
+        Map<Slot, ItemStack> virtualMap = new HashMap<>();
+        for (int i = 0; i < virtInv.size(); i++) {
+            ItemStack s = virtInv.getStack(i);
+            if (!s.isEmpty()) {
+                Slot virtualSlot = new VirtualSlot(virtInv, i);
+                virtualMap.put(virtualSlot, s.copy());
+            }
+        }
+
+        BasicRecipeTransferHandler.InventoryState virtualState = new BasicRecipeTransferHandler.InventoryState(
+                virtualMap,
+                0,
+                999
         );
 
-        if (invState == null) return;
+        if (!virtualState.hasRoom(inputSlots.size())) {
+            Text message = Text.translatable("jei.tooltip.error.recipe.transfer.inventory.full");
+            cir.setReturnValue(this.handlerHelper.createUserErrorWithTooltip(message));
+            return;
+        }
 
         RecipeTransferOperationsResult transferOps = RecipeTransferUtil.getRecipeTransferOperations(
-                stackHelper, invState.availableItemStacks(), inputSlots, craftingSlots
+                stackHelper, virtualState.availableItemStacks(), inputSlots, craftingSlots
         );
 
-        // detect any arbitrary slots by slot ID
-        boolean hasVirtual = transferOps.results.stream()
-                .anyMatch(op -> op.inventorySlotId() < 0 || op.craftingSlotId() < 0);
+        if (!transferOps.missingItems.isEmpty()) {
+            Text message = Text.translatable("jei.tooltip.error.recipe.transfer.missing");
+            cir.setReturnValue(this.handlerHelper.createUserErrorForMissingSlots(message, transferOps.missingItems));
+            return;
+        }
 
-        if (hasVirtual) {
+        if (!RecipeTransferUtil.validateSlots(player, transferOps.results, craftingSlots, inventorySlots)) {
+            cir.setReturnValue(this.handlerHelper.createInternalError());
+            return;
+        }
+
+        if (doTransfer){
             try {
                 MinecraftClient mc = MinecraftClient.getInstance();
                 mc.interactionManager.clickRecipe(
                         mc.player.currentScreenHandler.syncId,
-                        (RecipeEntry<?>) recipe,
+                        (net.minecraft.recipe.RecipeEntry<?>) recipe,
                         maxTransfer
                 );
-                cir.setReturnValue(null); // cancel JEI transfer
+                // cancel JEI transfer if all goes well
             } catch (Throwable t) {
                 System.err.println("[NearbyJEI] Fallback failed, falling back to normal JEI logic:");
                 t.printStackTrace();
                 // continue with JEI if anything goes wrong
             }
         }
+
+        cir.setReturnValue(null);
     }
 
 }
