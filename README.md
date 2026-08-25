@@ -5,6 +5,7 @@ It redirects the recipe book functionality to check and fill from a customisable
 
 ### What does this mean?
 See for yourself! 
+
 ![Recipe Book Access Demonstration](https://raw.githubusercontent.com/Jomlom/Recipe-Book-Access/refs/heads/main/demo.gif) \
 This is an EXAMPLE of a modded crafting table uses a custom list of inventories via this API, in this specific case it uses all inventories from nearby chests.
 
