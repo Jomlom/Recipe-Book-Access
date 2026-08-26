@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="CC0-1.0"
+
+[[mods]]
+modId="${mod_id}"
+version="${version}"
+displayName="${mod_name}"
+authors="Jomlom"
+logoFile="assets/recipebookaccess/icon.png"
+description='''
+An effortless Fabric API, enabling recipe-book crafting from customizable external inventories.
+'''
+
+[[mixins]]
+config="recipebookaccess.mixins.json"
+
+[[mixins]]
+config="recipebookaccess.client.mixins.json"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.11.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.11,1.21.12)"
+    ordering="NONE"
+    side="BOTH"
