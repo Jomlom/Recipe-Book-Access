@@ -3,9 +3,9 @@
 	"id": "recipebookaccess",
 	"version": "${version}",
 	"name": "${mod_name}",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "An effortless Fabric API, enabling recipe-book crafting from customizable external inventories.",
 	"authors": [
-		"Me!"
+		"Jomlom"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
