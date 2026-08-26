@@ -7,15 +7,24 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 public class RecipeBookAccessUtils {
 
-    private static final Map<Slot, Container> originMap = new HashMap<>();
+    private static final Map<Slot, List<OriginPortion>> originMap = new HashMap<>();
+    private static final Map<Object, RecipeHolder> lastPlacedRecipe = new WeakHashMap<>();
+
+    public static boolean isDifferentRecipe(Object menu, RecipeHolder recipe) {
+        RecipeHolder previous = lastPlacedRecipe.put(menu, recipe);
+        return !recipe.equals(previous);
+    }
 
     public static void populateStackedContents(StackedItemContents recipeFinder, List<ItemStack> items) {
         for (ItemStack itemStack : items) {
@@ -88,30 +97,110 @@ public class RecipeBookAccessUtils {
         }
     }
 
-    public static void trackGridSlotOrigins(List<Slot> gridSlots, SyntheticInventory synthetic) {
+    public static Map<Slot, Integer> snapshotGridCounts(List<Slot> gridSlots) {
+        Map<Slot, Integer> counts = new HashMap<>();
+        for (Slot slot : gridSlots) {
+            counts.put(slot, slot.getItem().getCount());
+        }
+        return counts;
+    }
+
+    // attributes only newly added units per slot and appends them to any portions already recorded
+    public static void trackGridSlotOrigins(List<Slot> gridSlots, SyntheticInventory synthetic, Map<Slot, Integer> beforeCounts) {
         List<StackOrigin> origins = synthetic.origins;
+        Inventory inv = synthetic.inventory;
+
+        Map<StackOrigin, Integer> remainingConsumed = new LinkedHashMap<>();
+        for (int i = 0; i < origins.size(); i++) {
+            StackOrigin origin = origins.get(i);
+            int consumed = origin.originalCount - inv.getItem(i).getCount();
+            if (consumed > 0) {
+                remainingConsumed.put(origin, consumed);
+            }
+        }
 
         for (Slot slot : gridSlots) {
             ItemStack stack = slot.getItem();
             if (stack.isEmpty()) continue;
 
-            for (StackOrigin origin : origins) {
-                if (ItemStack.isSameItem(stack, origin.container.getItem(origin.slotIndex))) {
-                    originMap.put(slot, origin.container);
-                    break;
-                }
+            int before = beforeCounts.getOrDefault(slot, 0);
+            int newlyAdded = stack.getCount() - before;
+            if (newlyAdded <= 0) continue;
+
+            List<OriginPortion> portions = new ArrayList<>();
+            int remaining = newlyAdded;
+
+            for (Map.Entry<StackOrigin, Integer> entry : remainingConsumed.entrySet()) {
+                if (remaining <= 0) break;
+                if (entry.getValue() <= 0) continue;
+                StackOrigin origin = entry.getKey();
+                if (!ItemStack.isSameItem(stack, origin.container.getItem(origin.slotIndex))) continue;
+
+                int take = Math.min(remaining, entry.getValue());
+                portions.add(new OriginPortion(origin, take));
+                entry.setValue(entry.getValue() - take);
+                remaining -= take;
+            }
+
+            if (!portions.isEmpty()) {
+                originMap.computeIfAbsent(slot, unused -> new ArrayList<>()).addAll(portions);
             }
         }
     }
 
-    public static boolean tryReturnItemToOrigin(Slot slot, ItemStack stack) {
-        Container originInventory = originMap.get(slot);
-        if (originInventory != null) {
-            boolean inserted = insertStackIntoInventory(originInventory, stack);
-            originMap.remove(slot);
-            return inserted;
+    public static void returnGridSlotsToOrigins(List<Slot> gridSlots, Player player) {
+        for (Slot slot : gridSlots) {
+            ItemStack stack = slot.getItem().copy();
+            if (stack.isEmpty()) continue;
+
+            boolean returned = tryReturnItemToOrigin(slot, stack);
+            if (!returned) {
+                player.getInventory().placeItemBackInInventory(stack, false);
+            }
+            slot.set(stack);
         }
-        return false;
+    }
+
+    // returns each portion to its exact origin slot first then falls back to the origin container
+    public static boolean tryReturnItemToOrigin(Slot slot, ItemStack stack) {
+        List<OriginPortion> portions = originMap.remove(slot);
+        if (portions == null) {
+            return false;
+        }
+
+        for (OriginPortion portion : portions) {
+            if (stack.isEmpty()) break;
+
+            ItemStack piece = stack.split(Math.min(portion.count, stack.getCount()));
+            returnToExactSlot(portion.origin, piece);
+            if (!piece.isEmpty()) {
+                insertStackIntoInventory(portion.origin.container, piece);
+            }
+            if (!piece.isEmpty()) {
+                stack.grow(piece.getCount());
+            }
+        }
+
+        return stack.isEmpty();
+    }
+
+    private static void returnToExactSlot(StackOrigin origin, ItemStack stack) {
+        ItemStack exact = origin.container.getItem(origin.slotIndex);
+        if (!exact.isEmpty() && !ItemStack.isSameItemSameComponents(exact, stack)) {
+            return;
+        }
+
+        int maxStackSize = Math.min(stack.getMaxStackSize(), exact.isEmpty() ? stack.getMaxStackSize() : exact.getMaxStackSize());
+        int availableSpace = maxStackSize - exact.getCount();
+        if (availableSpace <= 0) return;
+
+        int toTransfer = Math.min(availableSpace, stack.getCount());
+        if (exact.isEmpty()) {
+            origin.container.setItem(origin.slotIndex, stack.copyWithCount(toTransfer));
+        } else {
+            exact.grow(toTransfer);
+        }
+        stack.shrink(toTransfer);
     }
 
     private static boolean insertStackIntoInventory(Container inv, ItemStack stack) {
@@ -142,6 +231,8 @@ public class RecipeBookAccessUtils {
     }
 
     private record StackOrigin(Container container, int slotIndex, int originalCount) {}
+
+    private record OriginPortion(StackOrigin origin, int count) {}
 
     public static final class SyntheticInventory {
         public final Inventory inventory;

@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.List;
+import java.util.Map;
 
 @Mixin(net.minecraft.world.inventory.AbstractCraftingMenu.class)
 public abstract class RecipeFillMixin {
@@ -35,6 +36,12 @@ public abstract class RecipeFillMixin {
             boolean isCreative
     ) {
         if (this instanceof RecipeBookInventoryProvider customPop) {
+            if (RecipeBookAccessUtils.isDifferentRecipe(this, recipe)) {
+                RecipeBookAccessUtils.returnGridSlotsToOrigins(inputGridSlots, inventory.player);
+            }
+
+            Map<Slot, Integer> beforeCounts = RecipeBookAccessUtils.snapshotGridCounts(inputGridSlots);
+
             RecipeBookAccessUtils.SyntheticInventory synthetic =
                     RecipeBookAccessUtils.buildSyntheticInventory(inventory.player, customPop);
 
@@ -42,7 +49,7 @@ public abstract class RecipeFillMixin {
                     menu, gridWidth, gridHeight, inputGridSlots, slotsToClear, synthetic.inventory, recipe, useMaxItems, isCreative
             );
 
-            RecipeBookAccessUtils.trackGridSlotOrigins(inputGridSlots, synthetic);
+            RecipeBookAccessUtils.trackGridSlotOrigins(inputGridSlots, synthetic, beforeCounts);
             RecipeBookAccessUtils.reconcileSyntheticInventory(synthetic, customPop);
             return result;
         }
