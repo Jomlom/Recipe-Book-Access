@@ -27,6 +27,10 @@
 		{
 			"config": "recipebookaccess.client.mixins.json",
 			"environment": "client"
+		},
+		{
+			"config": "recipebookaccess.jei.mixins.json",
+			"environment": "client"
 		}
 	],
 	"depends": {
