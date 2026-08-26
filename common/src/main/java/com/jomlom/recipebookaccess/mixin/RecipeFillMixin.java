@@ -21,7 +21,16 @@ public abstract class RecipeFillMixin {
             method = "handlePlacement",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/recipebook/ServerPlaceRecipe;placeRecipe(Lnet/minecraft/recipebook/ServerPlaceRecipe$CraftingMenuAccess;IILjava/util/List;Ljava/util/List;Lnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/item/crafting/RecipeHolder;ZZ)Lnet/minecraft/world/inventory/RecipeBookMenu$PostPlaceAction;"
+                    target = "Lnet/minecraft/recipebook/ServerPlaceRecipe;"
+                            + "placeRecipe("
+                            + "Lnet/minecraft/recipebook/ServerPlaceRecipe$CraftingMenuAccess;"
+                            + "II"
+                            + "Ljava/util/List;"
+                            + "Ljava/util/List;"
+                            + "Lnet/minecraft/world/entity/player/Inventory;"
+                            + "Lnet/minecraft/world/item/crafting/RecipeHolder;"
+                            + "ZZ"
+                            + ")Lnet/minecraft/world/inventory/RecipeBookMenu$PostPlaceAction;"
             )
     )
     private RecipeBookMenu.PostPlaceAction redirectPlaceRecipe(
