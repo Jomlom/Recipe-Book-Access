@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.jomlom.recipebookaccess.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ScreenHandlerMixin",
+    "RecipeFillMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
