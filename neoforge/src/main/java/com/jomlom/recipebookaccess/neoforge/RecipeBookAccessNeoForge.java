@@ -3,6 +3,7 @@ package com.jomlom.recipebookaccess.neoforge;
 import com.jomlom.recipebookaccess.RecipeBookAccessCommon;
 import com.jomlom.recipebookaccess.network.CustomItemsPayload;
 import com.jomlom.recipebookaccess.network.RequestItemsPayload;
+import com.jomlom.recipebookaccess.network.TransferRecipePayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -31,6 +32,14 @@ public class RecipeBookAccessNeoForge {
                 if (context.player() instanceof ServerPlayer serverPlayer) {
                     List<ItemStack> items = RecipeBookAccessCommon.collectAutofillItems(serverPlayer);
                     context.reply(new CustomItemsPayload(items));
+                }
+            });
+        });
+
+        registrar.playToServer(TransferRecipePayload.ID, TransferRecipePayload.CODEC, (payload, context) -> {
+            context.enqueueWork(() -> {
+                if (context.player() instanceof ServerPlayer serverPlayer) {
+                    RecipeBookAccessCommon.handleTransferRecipe(serverPlayer, payload.containerId(), payload.recipeId(), payload.useMaxItems());
                 }
             });
         });

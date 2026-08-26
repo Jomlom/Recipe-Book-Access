@@ -2,6 +2,7 @@ package com.jomlom.recipebookaccess.neoforge;
 
 import com.jomlom.recipebookaccess.RecipeBookAccessCommon;
 import com.jomlom.recipebookaccess.network.RequestItemsPayload;
+import com.jomlom.recipebookaccess.network.TransferRecipePayload;
 import com.jomlom.recipebookaccess.platform.ClientNetworkHelper;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
@@ -34,10 +35,19 @@ public class NeoForgeClientNetworkHelper implements ClientNetworkHelper {
 
     @Override
     public void requestItems() {
+        send(new RequestItemsPayload(1));
+    }
+
+    @Override
+    public void transferRecipe(int containerId, String recipeId, boolean useMaxItems) {
+        send(new TransferRecipePayload(containerId, recipeId, useMaxItems));
+    }
+
+    private static void send(CustomPacketPayload payload) {
         try {
-            SEND_TO_SERVER.invoke(null, new RequestItemsPayload(1), (Object) new CustomPacketPayload[0]);
+            SEND_TO_SERVER.invoke(null, payload, (Object) new CustomPacketPayload[0]);
         } catch (ReflectiveOperationException e) {
-            RecipeBookAccessCommon.LOGGER.error("Failed to send RequestItemsPayload to server", e);
+            RecipeBookAccessCommon.LOGGER.error("Failed to send {} to server", payload, e);
         }
     }
 }
