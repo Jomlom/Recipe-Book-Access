@@ -18,6 +18,9 @@ config="recipebookaccess.mixins.json"
 [[mixins]]
 config="recipebookaccess.client.mixins.json"
 
+[[mixins]]
+config="recipebookaccess.jei.mixins.json"
+
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"

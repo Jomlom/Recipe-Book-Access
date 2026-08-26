@@ -6,4 +6,5 @@ import net.minecraft.resources.Identifier;
 public class NetworkConstants {
     public static final Identifier ITEMS_PACKET_ID = Identifier.fromNamespaceAndPath(RecipeBookAccessCommon.MOD_ID, "items_packet");
     public static final Identifier REQUEST_ITEMS_PACKET_ID = Identifier.fromNamespaceAndPath(RecipeBookAccessCommon.MOD_ID, "request_items_packet");
+    public static final Identifier TRANSFER_RECIPE_PACKET_ID = Identifier.fromNamespaceAndPath(RecipeBookAccessCommon.MOD_ID, "transfer_recipe_packet");
 }
