@@ -7,13 +7,14 @@ import net.minecraft.world.entity.player.StackedContents;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class RecipeBookAccessUtils {
 
-    private static final Map<Slot, Container> originMap = new HashMap<>();
+    private static final Map<Slot, List<SlotOriginPortion>> originMap = new HashMap<>();
 
     public static void populateCustomRecipeFinder(StackedContents recipeFinder, RecipeBookInventoryProvider customPopulator) {
         for (Container inventory : customPopulator.getInventoriesForAutofill()) {
@@ -29,14 +30,13 @@ public class RecipeBookAccessUtils {
         }
     }
 
+    // appends each source's portion instead of overwriting so multi-source slots are remembered
     public static int customFillInputSlot(Slot slot, ItemStack stack, int count, RecipeBookInventoryProvider customPop) {
         ItemStack slotStack = slot.getItem();
 
         for (Container inv : customPop.getInventoriesForAutofill()) {
             int matchingIndex = getMatchingSlotForInventory(inv, stack, slotStack);
             if (matchingIndex != -1) {
-                originMap.put(slot, inv);
-
                 ItemStack invStack = inv.getItem(matchingIndex);
                 ItemStack removedStack;
                 if (count < invStack.getCount()) {
@@ -46,6 +46,11 @@ public class RecipeBookAccessUtils {
                 }
 
                 int removedCount = removedStack.getCount();
+                if (removedCount > 0) {
+                    originMap.computeIfAbsent(slot, unused -> new ArrayList<>())
+                            .add(new SlotOriginPortion(inv, matchingIndex, removedCount));
+                }
+
                 if (slotStack.isEmpty()) {
                     slot.set(removedStack);
                 } else {
@@ -74,15 +79,49 @@ public class RecipeBookAccessUtils {
         return !stack.isDamaged() && !stack.isEnchanted() && !stack.has(DataComponents.CUSTOM_NAME);
     }
 
+    // returns each portion to its exact origin slot first then falls back to the origin container
     public static boolean tryReturnItemToOrigin(Slot slot, ItemStack stack) {
-        Container originInventory = originMap.get(slot);
-        if (originInventory != null) {
-            boolean inserted = insertStackIntoInventory(originInventory, stack);
-            originMap.remove(slot);
-            return inserted;
+        List<SlotOriginPortion> portions = originMap.remove(slot);
+        if (portions == null) {
+            return false;
         }
-        return false;
+
+        for (SlotOriginPortion portion : portions) {
+            if (stack.isEmpty()) break;
+
+            ItemStack piece = stack.split(Math.min(portion.count(), stack.getCount()));
+            returnToExactSlot(portion, piece);
+            if (!piece.isEmpty()) {
+                insertStackIntoInventory(portion.container(), piece);
+            }
+            if (!piece.isEmpty()) {
+                stack.grow(piece.getCount());
+            }
+        }
+
+        return stack.isEmpty();
     }
+
+    private static void returnToExactSlot(SlotOriginPortion origin, ItemStack stack) {
+        ItemStack exact = origin.container().getItem(origin.slotIndex());
+        if (!exact.isEmpty() && !ItemStack.isSameItemSameComponents(exact, stack)) {
+            return;
+        }
+
+        int maxStackSize = Math.min(stack.getMaxStackSize(), exact.isEmpty() ? stack.getMaxStackSize() : exact.getMaxStackSize());
+        int availableSpace = maxStackSize - exact.getCount();
+        if (availableSpace <= 0) return;
+
+        int toTransfer = Math.min(availableSpace, stack.getCount());
+        if (exact.isEmpty()) {
+            origin.container().setItem(origin.slotIndex(), stack.copyWithCount(toTransfer));
+        } else {
+            exact.grow(toTransfer);
+        }
+        stack.shrink(toTransfer);
+    }
+
+    private record SlotOriginPortion(Container container, int slotIndex, int count) {}
 
     private static boolean insertStackIntoInventory(Container inv, ItemStack stack) {
         for (int i = 0; i < inv.getContainerSize(); i++) {
