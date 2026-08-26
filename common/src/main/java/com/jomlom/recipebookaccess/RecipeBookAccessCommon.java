@@ -1,10 +1,15 @@
 package com.jomlom.recipebookaccess;
 
 import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.AbstractCraftingMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,5 +35,17 @@ public class RecipeBookAccessCommon {
             }
         }
         return items;
+    }
+
+    public static void handleTransferRecipe(ServerPlayer player, int containerId, String recipeId, boolean useMaxItems) {
+        AbstractContainerMenu handler = player.containerMenu;
+        if (handler.containerId != containerId || !(handler instanceof AbstractCraftingMenu craftingMenu)
+                || !(handler instanceof RecipeBookInventoryProvider)) {
+            return;
+        }
+
+        ResourceKey<Recipe<?>> key = ResourceKey.create(Registries.RECIPE, ResourceLocation.parse(recipeId));
+        player.serverLevel().recipeAccess().byKey(key).ifPresent(recipe ->
+                craftingMenu.handlePlacement(useMaxItems, player.isCreative(), recipe, player.serverLevel(), player.getInventory()));
     }
 }
