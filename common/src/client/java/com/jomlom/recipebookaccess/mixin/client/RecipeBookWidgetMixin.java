@@ -49,6 +49,11 @@ public abstract class RecipeBookWidgetMixin {
 				((RecipeBookWidgetAccessor)widget).getCraftingScreenHandler();
 
 		if (handler instanceof RecipeBookInventoryProvider) {
+			if (ClientItemsReciever.isRequestPending()) {
+				RecipeBookAccessUtils.populateCustomRecipeFinder(recipeFinder, ClientItemsReciever.getItemStacks());
+				return;
+			}
+
 			ClientServices.NETWORK.requestItems();
 			ClientItemsReciever.setOnUpdate(() -> {
 				List<ItemStack> updatedItems = ClientItemsReciever.getItemStacks();
