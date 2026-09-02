@@ -38,39 +38,32 @@ public class RecipeBookAccessUtils {
     }
 
     // appends each source's portion instead of overwriting so multi-source slots are remembered
-    public static int customFillInputSlot(Slot slot, ItemStack stack, int count, RecipeBookInventoryProvider customPop) {
-        return customFillInputSlot(slot, stack, count, customPop.getInventoriesForAutofill());
+    public static void customFillInputSlot(Slot slot, ItemStack stack, RecipeBookInventoryProvider customPop) {
+        customFillInputSlot(slot, stack, customPop.getInventoriesForAutofill());
     }
 
-    public static int customFillInputSlot(Slot slot, ItemStack stack, int count, List<Container> inventories) {
+    public static void customFillInputSlot(Slot slot, ItemStack stack, List<Container> inventories) {
         ItemStack slotStack = slot.getItem();
 
         for (Container inv : inventories) {
             int matchingIndex = getMatchingSlotForInventory(inv, stack, slotStack);
             if (matchingIndex != -1) {
                 ItemStack invStack = inv.getItem(matchingIndex);
-                ItemStack removedStack;
-                if (count < invStack.getCount()) {
-                    removedStack = inv.removeItem(matchingIndex, count);
-                } else {
-                    removedStack = inv.removeItemNoUpdate(matchingIndex);
-                }
+                ItemStack removedStack = invStack.getCount() > 1
+                        ? inv.removeItem(matchingIndex, 1)
+                        : inv.removeItemNoUpdate(matchingIndex);
 
-                int removedCount = removedStack.getCount();
-                if (removedCount > 0) {
-                    originMap.computeIfAbsent(slot, unused -> new ArrayList<>())
-                            .add(new SlotOriginPortion(inv, matchingIndex, removedCount));
-                }
+                originMap.computeIfAbsent(slot, unused -> new ArrayList<>())
+                        .add(new SlotOriginPortion(inv, matchingIndex, 1));
 
                 if (slotStack.isEmpty()) {
                     slot.set(removedStack);
                 } else {
-                    slotStack.grow(removedCount);
+                    slotStack.grow(1);
                 }
-                return count - removedCount;
+                return;
             }
         }
-        return -1;
     }
 
     private static int getMatchingSlotForInventory(Container inv, ItemStack item, ItemStack stack) {

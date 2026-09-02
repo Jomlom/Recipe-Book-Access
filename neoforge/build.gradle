@@ -58,6 +58,18 @@ processResources {
 	filesMatching("META-INF/mods.toml") {
 		expand "version": inputs.properties.version, "mod_name": rootProject.mod_name, "mod_id": rootProject.mod_id
 	}
+
+	doLast {
+		def refmapName = "recipebookaccess.refmap.json"
+		["recipebookaccess.mixins.json", "recipebookaccess.client.mixins.json", "recipebookaccess.jei.mixins.json"].each { name ->
+			def file = new File(destinationDir, name)
+			if (file.exists()) {
+				def json = new groovy.json.JsonSlurper().parse(file)
+				json.refmap = refmapName
+				file.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json))
+			}
+		}
+	}
 }
 
 jar {

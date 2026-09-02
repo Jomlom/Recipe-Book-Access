@@ -18,7 +18,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
@@ -72,12 +71,12 @@ public abstract class InputSlotFillerMixin {
             at = @At("HEAD"), cancellable = true
     )
     private void onFillInputSlot(
-            Slot slot, ItemStack stack, int count, CallbackInfoReturnable<Integer> cir
+            Slot slot, ItemStack stack, CallbackInfo ci
     ) {
         if (menu instanceof RecipeBookInventoryProvider && cachedInventories != null) {
-            int customResult = RecipeBookAccessUtils.customFillInputSlot(slot, stack, count, cachedInventories);
+            RecipeBookAccessUtils.customFillInputSlot(slot, stack, cachedInventories);
             slot.setChanged();
-            cir.setReturnValue(customResult);
+            ci.cancel();
         }
     }
 
