@@ -30,11 +30,23 @@ public class RecipeBookAccessUtils {
         }
     }
 
+    public static void populateCustomRecipeFinderFromInventories(StackedContents recipeFinder, List<Container> inventories) {
+        for (Container inventory : inventories) {
+            for (int i = 0; i < inventory.getContainerSize(); i++) {
+                recipeFinder.accountStack(inventory.getItem(i));
+            }
+        }
+    }
+
     // appends each source's portion instead of overwriting so multi-source slots are remembered
     public static int customFillInputSlot(Slot slot, ItemStack stack, int count, RecipeBookInventoryProvider customPop) {
+        return customFillInputSlot(slot, stack, count, customPop.getInventoriesForAutofill());
+    }
+
+    public static int customFillInputSlot(Slot slot, ItemStack stack, int count, List<Container> inventories) {
         ItemStack slotStack = slot.getItem();
 
-        for (Container inv : customPop.getInventoriesForAutofill()) {
+        for (Container inv : inventories) {
             int matchingIndex = getMatchingSlotForInventory(inv, stack, slotStack);
             if (matchingIndex != -1) {
                 ItemStack invStack = inv.getItem(matchingIndex);
