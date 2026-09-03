@@ -10,12 +10,13 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import vectorwing.farmersdelight.common.block.entity.container.CookingPotMenu;
 
 import java.util.List;
 import java.util.Map;
 
-@Mixin(net.minecraft.world.inventory.AbstractCraftingMenu.class)
-public abstract class RecipeFillMixin {
+@Mixin(CookingPotMenu.class)
+public abstract class CookingPotRecipeFillMixin {
 
     @Redirect(
             method = "handlePlacement",
