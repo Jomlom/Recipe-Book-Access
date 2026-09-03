@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "recipebookaccess",
+	"version": "${version}",
+	"name": "${mod_name}",
+	"description": "An effortless Fabric API, enabling recipe-book crafting from customizable external inventories.",
+	"authors": [
+		"Jomlom"
+	],
+	"contact": {
+		"sources": "https://github.com/Jomlom/Recipe-Book-Access"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/recipebookaccess/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.jomlom.recipebookaccess.fabric.RecipeBookAccessFabric"
+		],
+		"client": [
+			"com.jomlom.recipebookaccess.fabric.RecipeBookAccessFabricClient"
+		]
+	},
+	"mixins": [
+		"recipebookaccess.mixins.json",
+		{
+			"config": "recipebookaccess.client.mixins.json",
+			"environment": "client"
+		},
+		{
+			"config": "recipebookaccess.jei.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": ">=26.1 <=26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

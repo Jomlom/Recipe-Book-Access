@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.jomlom.recipebookaccess.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "RecipeBookWidgetAccessor",
+    "RecipeBookWidgetMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

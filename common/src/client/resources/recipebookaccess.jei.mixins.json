@@ -1,0 +1,12 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.jomlom.recipebookaccess.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "BasicRecipeTransferHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

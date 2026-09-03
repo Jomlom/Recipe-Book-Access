@@ -1,0 +1,51 @@
+package com.jomlom.recipebookaccess.neoforge;
+
+import com.jomlom.recipebookaccess.RecipeBookAccessCommon;
+import com.jomlom.recipebookaccess.network.CustomItemsPayload;
+import com.jomlom.recipebookaccess.network.RequestItemsPayload;
+import com.jomlom.recipebookaccess.network.TransferRecipePayload;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+
+import java.util.List;
+
+@Mod(RecipeBookAccessCommon.MOD_ID)
+public class RecipeBookAccessNeoForge {
+
+    private final Dist dist;
+
+    public RecipeBookAccessNeoForge(IEventBus modEventBus, Dist dist) {
+        this.dist = dist;
+        modEventBus.addListener(this::registerPayloads);
+    }
+
+    private void registerPayloads(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar("1");
+
+        registrar.playToServer(RequestItemsPayload.ID, RequestItemsPayload.CODEC, (payload, context) -> {
+            context.enqueueWork(() -> {
+                if (context.player() instanceof ServerPlayer serverPlayer) {
+                    List<ItemStack> items = RecipeBookAccessCommon.collectAutofillItems(serverPlayer);
+                    context.reply(new CustomItemsPayload(items));
+                }
+            });
+        });
+
+        registrar.playToServer(TransferRecipePayload.ID, TransferRecipePayload.CODEC, (payload, context) -> {
+            context.enqueueWork(() -> {
+                if (context.player() instanceof ServerPlayer serverPlayer) {
+                    RecipeBookAccessCommon.handleTransferRecipe(serverPlayer, payload.containerId(), payload.recipeId(), payload.useMaxItems());
+                }
+            });
+        });
+
+        if (dist == Dist.CLIENT) {
+            RecipeBookAccessNeoForgeClient.registerClientPayloads(registrar);
+        }
+    }
+}

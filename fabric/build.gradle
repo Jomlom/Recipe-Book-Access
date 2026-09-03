@@ -1,0 +1,62 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version '1.17.20'
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"recipebookaccess" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+sourceSets {
+	main {
+		java.srcDir project(':common').file('src/main/java')
+		resources.srcDir project(':common').file('src/main/resources')
+	}
+	client {
+		java.srcDir project(':common').file('src/client/java')
+		resources.srcDir project(':common').file('src/client/resources')
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+
+	// Fabric API. This is technically optional, but you probably want it anyway.
+	implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_version}"
+
+	implementation("mezz.jei:jei-26.2-fabric:30.29.0.201") {
+		transitive = false
+	}
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version, "mod_name": rootProject.mod_name
+	}
+}
+
+jar {
+	inputs.property "archivesName", project.base.archivesName
+
+	from(rootProject.file("LICENSE")) {
+		rename { "${it}_${inputs.properties.archivesName}" }
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifactId = "${rootProject.archives_base_name}-fabric"
+			from components.java
+		}
+	}
+}
