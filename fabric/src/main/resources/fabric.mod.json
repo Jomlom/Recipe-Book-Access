@@ -23,6 +23,7 @@
 	},
 	"mixins": [
 		"recipebookaccess.mixins.json",
+		"recipebookaccess.farmersdelight.mixins.json",
 		{
 			"config": "recipebookaccess.client.mixins.json",
 			"environment": "client"
