@@ -8,6 +8,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 import java.util.ArrayList;
@@ -15,17 +16,34 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 public class RecipeBookAccessUtils {
 
     private static final Map<Slot, List<OriginPortion>> originMap = new HashMap<>();
-    private static final Map<Object, RecipeHolder> lastPlacedRecipe = new WeakHashMap<>();
 
-    // only pre-clear the grid when the recipe actually changes not on a repeat click
-    public static boolean isDifferentRecipe(Object menu, RecipeHolder recipe) {
-        RecipeHolder previous = lastPlacedRecipe.put(menu, recipe);
-        return !recipe.equals(previous);
+    public static void reconcileGridForRecipe(List<Slot> gridSlots, RecipeHolder recipe, Player player) {
+        List<Ingredient> ingredients = recipe.value().placementInfo().ingredients();
+
+        for (Slot slot : gridSlots) {
+            ItemStack current = slot.getItem();
+            if (current.isEmpty()) continue;
+
+            boolean stillNeeded = false;
+            for (Ingredient ingredient : ingredients) {
+                if (ingredient.test(current)) {
+                    stillNeeded = true;
+                    break;
+                }
+            }
+            if (stillNeeded) continue;
+
+            ItemStack stack = current.copy();
+            boolean returned = tryReturnItemToOrigin(slot, stack);
+            if (!returned) {
+                player.getInventory().placeItemBackInInventory(stack, false);
+            }
+            slot.set(stack);
+        }
     }
 
     public static void populateStackedContents(StackedItemContents recipeFinder, List<ItemStack> items) {
