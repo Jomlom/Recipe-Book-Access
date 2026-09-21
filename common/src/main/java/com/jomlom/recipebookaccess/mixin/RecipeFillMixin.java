@@ -50,7 +50,7 @@ public abstract class RecipeFillMixin {
             Map<Slot, Integer> beforeCounts = RecipeBookAccessUtils.snapshotGridCounts(inputGridSlots);
 
             RecipeBookAccessUtils.SyntheticInventory synthetic =
-                    RecipeBookAccessUtils.buildSyntheticInventory(inventory.player, customPop);
+                    RecipeBookAccessUtils.buildSyntheticInventory(inventory.player, customPop, recipe);
 
             RecipeBookMenu.PostPlaceAction result = ServerPlaceRecipe.placeRecipe(
                     menu, gridWidth, gridHeight, inputGridSlots, slotsToClear, synthetic.inventory, recipe, useMaxItems, isCreative

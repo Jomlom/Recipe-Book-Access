@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public class RecipeBookAccessUtils {
 
@@ -47,20 +48,23 @@ public class RecipeBookAccessUtils {
     }
 
     public static void populateStackedContents(StackedItemContents recipeFinder, List<ItemStack> items) {
+        recipeFinder.clear();
         for (ItemStack itemStack : items) {
             recipeFinder.accountStack(itemStack);
         }
     }
 
-    public static SyntheticInventory buildSyntheticInventory(Player player, RecipeBookInventoryProvider customPop) {
+    public static SyntheticInventory buildSyntheticInventory(Player player, RecipeBookInventoryProvider customPop, RecipeHolder<?> recipe) {
         Inventory synthetic = new Inventory(player, new EntityEquipment());
         List<StackOrigin> origins = new ArrayList<>();
+
+        Predicate<ItemStack> isRelevant = relevanceFilter(recipe);
 
         outer:
         for (Container inv : customPop.getInventoriesForAutofill()) {
             for (int slotIndex = 0; slotIndex < inv.getContainerSize(); slotIndex++) {
                 ItemStack stack = inv.getItem(slotIndex);
-                if (stack.isEmpty()) continue;
+                if (stack.isEmpty() || !isRelevant.test(stack)) continue;
                 if (origins.size() >= synthetic.getContainerSize()) break outer;
                 synthetic.setItem(origins.size(), stack.copy());
                 origins.add(new StackOrigin(inv, slotIndex, stack.getCount()));
@@ -68,6 +72,18 @@ public class RecipeBookAccessUtils {
         }
 
         return new SyntheticInventory(synthetic, origins);
+    }
+
+    private static Predicate<ItemStack> relevanceFilter(RecipeHolder<?> recipe) {
+        List<Ingredient> ingredients = recipe.value().placementInfo().ingredients();
+        return stack -> {
+            for (Ingredient ingredient : ingredients) {
+                if (ingredient.test(stack)) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     public static void reconcileSyntheticInventory(SyntheticInventory synthetic, RecipeBookInventoryProvider customPop) {

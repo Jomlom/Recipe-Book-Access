@@ -49,17 +49,15 @@ public abstract class RecipeBookWidgetMixin {
 				((RecipeBookWidgetAccessor)widget).getCraftingScreenHandler();
 
 		if (handler instanceof RecipeBookInventoryProvider) {
-			if (ClientItemsReciever.isRequestPending()) {
-				RecipeBookAccessUtils.populateStackedContents(recipeFinder, ClientItemsReciever.getItemStacks());
-				return;
-			}
+			RecipeBookAccessUtils.populateStackedContents(recipeFinder, ClientItemsReciever.getItemStacks());
 
-			ClientServices.NETWORK.requestItems();
 			ClientItemsReciever.setOnUpdate(() -> {
 				List<ItemStack> updatedItems = ClientItemsReciever.getItemStacks();
 				RecipeBookAccessUtils.populateStackedContents(recipeFinder, updatedItems);
 				widget.recipesUpdated();
 			});
+
+			ClientServices.NETWORK.requestItems();
 		} else {
 			inventory.fillStackedContents(recipeFinder);
 		}
