@@ -29,7 +29,7 @@ public class RecipeBookAccessCommon {
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack stack = inventory.getItem(i);
                     if (!stack.isEmpty()) {
-                        items.add(stack);
+                        items.add(stack.copy());
                     }
                 }
             }

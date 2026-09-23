@@ -31,6 +31,6 @@ config="recipebookaccess.jei.mixins.json"
 [[dependencies.${mod_id}]]
     modId="minecraft"
     type="required"
-    versionRange="[26.1,26.3)"
+    versionRange="[26.2,26.3)"
     ordering="NONE"
     side="BOTH"
