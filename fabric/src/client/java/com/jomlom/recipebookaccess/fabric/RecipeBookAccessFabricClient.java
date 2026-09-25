@@ -13,7 +13,7 @@ public class RecipeBookAccessFabricClient implements ClientModInitializer {
 
 		ClientPlayNetworking.registerGlobalReceiver(CustomItemsPayload.ID, (payload, context) -> {
 			context.client().execute(() -> {
-				ClientItemsReciever.recieveItems(context.client(), payload.itemStacks());
+				ClientItemsReciever.recieveItems(context.client(), payload.itemStacks(), payload.active());
 			});
 		});
 

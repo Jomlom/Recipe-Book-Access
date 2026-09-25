@@ -12,7 +12,7 @@ public class RecipeBookAccessNeoForgeClient {
 
     public static void registerClientPayloads(PayloadRegistrar registrar) {
         registrar.playToClient(CustomItemsPayload.ID, CustomItemsPayload.CODEC, (payload, context) -> {
-            context.enqueueWork(() -> ClientItemsReciever.recieveItems(Minecraft.getInstance(), payload.itemStacks()));
+            context.enqueueWork(() -> ClientItemsReciever.recieveItems(Minecraft.getInstance(), payload.itemStacks(), payload.active()));
         });
 
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> ClientAutoRefresh.tick(Minecraft.getInstance()));

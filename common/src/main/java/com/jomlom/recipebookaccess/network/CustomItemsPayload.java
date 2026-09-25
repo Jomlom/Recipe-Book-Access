@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record CustomItemsPayload(List<ItemStack> itemStacks) implements CustomPacketPayload {
+public record CustomItemsPayload(List<ItemStack> itemStacks, boolean active) implements CustomPacketPayload {
 
     public CustomItemsPayload {
         itemStacks = itemStacks.stream()
@@ -23,6 +23,8 @@ public record CustomItemsPayload(List<ItemStack> itemStacks) implements CustomPa
             StreamCodec.composite(
                 ByteBufCodecs.collection(ArrayList::new, ItemStack.STREAM_CODEC),
                 CustomItemsPayload::itemStacks,
+                ByteBufCodecs.BOOL,
+                CustomItemsPayload::active,
                 CustomItemsPayload::new
             );
 

@@ -13,6 +13,7 @@ public class ClientAutoRefresh {
         if (client.player == null || !(client.player.containerMenu instanceof RecipeBookInventoryProvider)) {
             ticksUntilNextRequest = 0;
             ClientItemsReciever.clearOnUpdate();
+            ClientItemsReciever.reset();
             return;
         }
 

@@ -21,6 +21,10 @@ public class RecipeBookAccessCommon {
     public static final String MOD_ID = "recipebookaccess";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+    public static boolean isActive(ServerPlayer player) {
+        return player.containerMenu instanceof RecipeBookInventoryProvider provider && provider.isActive();
+    }
+
     public static List<ItemStack> collectAutofillItems(ServerPlayer player) {
         AbstractContainerMenu handler = player.containerMenu;
         List<ItemStack> items = new ArrayList<>();

@@ -45,7 +45,13 @@ public abstract class RecipeFillMixin {
             boolean isCreative
     ) {
         if (this instanceof RecipeBookInventoryProvider customPop) {
-            RecipeBookAccessUtils.reconcileGridForRecipe(inputGridSlots, recipe, inventory.player);
+            if (menu.recipeMatches(recipe) && !useMaxItems) {
+                if (RecipeBookAccessUtils.incrementPlacedRecipe(inputGridSlots, customPop, inventory.player)) {
+                    return RecipeBookMenu.PostPlaceAction.NOTHING;
+                }
+            } else {
+                RecipeBookAccessUtils.returnGridSlotsToOrigins(inputGridSlots, inventory.player);
+            }
 
             Map<Slot, Integer> beforeCounts = RecipeBookAccessUtils.snapshotGridCounts(inputGridSlots);
 
