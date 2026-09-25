@@ -23,7 +23,7 @@ public class RecipeBookAccessFabric implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(RequestItemsPayload.ID, (payload, context) -> {
 			context.server().execute(() -> {
 				List<ItemStack> items = RecipeBookAccessCommon.collectAutofillItems(context.player());
-				ServerPlayNetworking.send(context.player(), new CustomItemsPayload(items));
+				ServerPlayNetworking.send(context.player(), new CustomItemsPayload(items, RecipeBookAccessCommon.isActive(context.player())));
 			});
 		});
 

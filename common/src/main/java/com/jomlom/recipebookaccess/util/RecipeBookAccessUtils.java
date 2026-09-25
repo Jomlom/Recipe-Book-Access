@@ -10,57 +10,37 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public class RecipeBookAccessUtils {
 
     private static final Map<Slot, List<OriginPortion>> originMap = new HashMap<>();
 
-    public static void reconcileGridForRecipe(List<Slot> gridSlots, RecipeHolder recipe, Player player) {
-        List<Ingredient> ingredients = recipe.value().placementInfo().ingredients();
-
-        for (Slot slot : gridSlots) {
-            ItemStack current = slot.getItem();
-            if (current.isEmpty()) continue;
-
-            boolean stillNeeded = false;
-            for (Ingredient ingredient : ingredients) {
-                if (ingredient.test(current)) {
-                    stillNeeded = true;
-                    break;
-                }
-            }
-            if (stillNeeded) continue;
-
-            ItemStack stack = current.copy();
-            boolean returned = tryReturnItemToOrigin(slot, stack);
-            if (!returned) {
-                player.getInventory().placeItemBackInInventory(stack, false);
-            }
-            slot.set(stack);
-        }
-    }
-
     public static void populateStackedContents(StackedItemContents recipeFinder, List<ItemStack> items) {
+        recipeFinder.clear();
         for (ItemStack itemStack : items) {
             recipeFinder.accountStack(itemStack);
         }
     }
 
-    public static SyntheticInventory buildSyntheticInventory(Player player, RecipeBookInventoryProvider customPop) {
+    public static SyntheticInventory buildSyntheticInventory(Player player, RecipeBookInventoryProvider customPop, RecipeHolder<?> recipe) {
         Inventory synthetic = new Inventory(player, new EntityEquipment());
         List<StackOrigin> origins = new ArrayList<>();
+
+        Predicate<ItemStack> isRelevant = relevanceFilter(recipe);
 
         outer:
         for (Container inv : customPop.getInventoriesForAutofill()) {
             for (int slotIndex = 0; slotIndex < inv.getContainerSize(); slotIndex++) {
                 ItemStack stack = inv.getItem(slotIndex);
-                if (stack.isEmpty()) continue;
+                if (stack.isEmpty() || !isRelevant.test(stack)) continue;
                 if (origins.size() >= synthetic.getContainerSize()) break outer;
                 synthetic.setItem(origins.size(), stack.copy());
                 origins.add(new StackOrigin(inv, slotIndex, stack.getCount()));
@@ -68,6 +48,18 @@ public class RecipeBookAccessUtils {
         }
 
         return new SyntheticInventory(synthetic, origins);
+    }
+
+    private static Predicate<ItemStack> relevanceFilter(RecipeHolder<?> recipe) {
+        List<Ingredient> ingredients = recipe.value().placementInfo().ingredients();
+        return stack -> {
+            for (Ingredient ingredient : ingredients) {
+                if (ingredient.test(stack)) {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     public static void reconcileSyntheticInventory(SyntheticInventory synthetic, RecipeBookInventoryProvider customPop) {
@@ -157,7 +149,7 @@ public class RecipeBookAccessUtils {
                 if (!ItemStack.isSameItem(stack, origin.container.getItem(origin.slotIndex))) continue;
 
                 int take = Math.min(remaining, entry.getValue());
-                portions.add(new OriginPortion(origin, take));
+                portions.add(new OriginPortion(origin, take, stack.copyWithCount(1)));
                 entry.setValue(entry.getValue() - take);
                 remaining -= take;
             }
@@ -168,10 +160,73 @@ public class RecipeBookAccessUtils {
         }
     }
 
+    public static boolean incrementPlacedRecipe(List<Slot> gridSlots, RecipeBookInventoryProvider customPop, Player player) {
+        List<Slot> filled = gridSlots.stream().filter(Slot::hasItem).toList();
+        if (filled.isEmpty()) return false;
+
+        List<Take> takes = planIncrement(filled, customPop.getInventoriesForAutofill());
+        if (takes != null) {
+            applyTakes(takes);
+            player.getInventory().setChanged();
+        }
+        return true;
+    }
+
+    private static @Nullable List<Take> planIncrement(List<Slot> filled, List<Container> containers) {
+        int targetCount = filled.stream().mapToInt(slot -> slot.getItem().getCount()).min().getAsInt() + 1;
+        List<Take> takes = new ArrayList<>();
+
+        for (Slot slot : filled) {
+            ItemStack placed = slot.getItem();
+            int needed = targetCount - placed.getCount();
+            if (needed <= 0) continue;
+            if (targetCount > placed.getMaxStackSize()) return null;
+
+            for (Container container : containers) {
+                for (int i = 0; i < container.getContainerSize() && needed > 0; i++) {
+                    ItemStack stack = container.getItem(i);
+                    if (stack.isEmpty() || !ItemStack.isSameItemSameComponents(placed, stack)) continue;
+
+                    int amount = Math.min(needed, stack.getCount() - reservedFrom(takes, container, i));
+                    if (amount <= 0) continue;
+
+                    takes.add(new Take(slot, new StackOrigin(container, i, stack.getCount()), amount));
+                    needed -= amount;
+                }
+            }
+            if (needed > 0) return null;
+        }
+        return takes;
+    }
+
+    private static void applyTakes(List<Take> takes) {
+        for (Take take : takes) {
+            take.origin.container.removeItem(take.origin.slotIndex, take.count);
+            ItemStack placed = take.slot.getItem();
+            placed.grow(take.count);
+            take.slot.set(placed);
+            originMap.computeIfAbsent(take.slot, unused -> new ArrayList<>())
+                    .add(new OriginPortion(take.origin, take.count, placed.copyWithCount(1)));
+        }
+    }
+
+    private static int reservedFrom(List<Take> takes, Container container, int slotIndex) {
+        int reserved = 0;
+        for (Take take : takes) {
+            if (take.origin.container == container && take.origin.slotIndex == slotIndex) {
+                reserved += take.count;
+            }
+        }
+        return reserved;
+    }
+
     public static void returnGridSlotsToOrigins(List<Slot> gridSlots, Player player) {
         for (Slot slot : gridSlots) {
             ItemStack stack = slot.getItem().copy();
-            if (stack.isEmpty()) continue;
+            if (stack.isEmpty()) {
+                originMap.remove(slot);
+                continue;
+            }
 
             boolean returned = tryReturnItemToOrigin(slot, stack);
             if (!returned) {
@@ -190,6 +245,7 @@ public class RecipeBookAccessUtils {
 
         for (OriginPortion portion : portions) {
             if (stack.isEmpty()) break;
+            if (!ItemStack.isSameItem(portion.item, stack)) continue;
 
             ItemStack piece = stack.split(Math.min(portion.count, stack.getCount()));
             returnToExactSlot(portion.origin, piece);
@@ -217,8 +273,10 @@ public class RecipeBookAccessUtils {
         int toTransfer = Math.min(availableSpace, stack.getCount());
         if (exact.isEmpty()) {
             origin.container.setItem(origin.slotIndex, stack.copyWithCount(toTransfer));
+            if (origin.container.getItem(origin.slotIndex).isEmpty()) return;
         } else {
             exact.grow(toTransfer);
+            origin.container.setItem(origin.slotIndex, exact);
         }
         stack.shrink(toTransfer);
     }
@@ -226,12 +284,13 @@ public class RecipeBookAccessUtils {
     private static boolean insertStackIntoInventory(Container inv, ItemStack stack) {
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack invStack = inv.getItem(i);
-            if (!invStack.isEmpty() && ItemStack.isSameItemSameComponents(invStack, stack)) {
+            if (!invStack.isEmpty() && ItemStack.isSameItemSameComponents(invStack, stack) && inv.canPlaceItem(i, stack)) {
                 int maxStackSize = Math.min(invStack.getMaxStackSize(), stack.getMaxStackSize());
                 int availableSpace = maxStackSize - invStack.getCount();
                 if (availableSpace > 0) {
                     int toTransfer = Math.min(availableSpace, stack.getCount());
                     invStack.grow(toTransfer);
+                    inv.setItem(i, invStack);
                     stack.shrink(toTransfer);
                     if (stack.isEmpty()) {
                         return true;
@@ -241,7 +300,7 @@ public class RecipeBookAccessUtils {
         }
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack invStack = inv.getItem(i);
-            if (invStack.isEmpty()) {
+            if (invStack.isEmpty() && inv.canPlaceItem(i, stack)) {
                 inv.setItem(i, stack.copy());
                 stack.setCount(0);
                 return true;
@@ -252,7 +311,9 @@ public class RecipeBookAccessUtils {
 
     private record StackOrigin(Container container, int slotIndex, int originalCount) {}
 
-    private record OriginPortion(StackOrigin origin, int count) {}
+    private record OriginPortion(StackOrigin origin, int count, ItemStack item) {}
+
+    private record Take(Slot slot, StackOrigin origin, int count) {}
 
     public static final class SyntheticInventory {
         public final Inventory inventory;
