@@ -45,14 +45,19 @@ public abstract class RecipeFillMixin {
             boolean isCreative
     ) {
         if (this instanceof RecipeBookInventoryProvider customPop) {
-            if (RecipeBookAccessUtils.isDifferentRecipe(this, recipe)) {
+            boolean sameRecipe = !RecipeBookAccessUtils.isDifferentRecipe(this, recipe);
+            if (sameRecipe && !useMaxItems) {
+                if (RecipeBookAccessUtils.incrementPlacedRecipe(inputGridSlots, customPop, inventory.player)) {
+                    return RecipeBookMenu.PostPlaceAction.NOTHING;
+                }
+            } else {
                 RecipeBookAccessUtils.returnGridSlotsToOrigins(inputGridSlots, inventory.player);
             }
 
             Map<Slot, Integer> beforeCounts = RecipeBookAccessUtils.snapshotGridCounts(inputGridSlots);
 
             RecipeBookAccessUtils.SyntheticInventory synthetic =
-                    RecipeBookAccessUtils.buildSyntheticInventory(inventory.player, customPop);
+                    RecipeBookAccessUtils.buildSyntheticInventory(inventory.player, customPop, recipe);
 
             RecipeBookMenu.PostPlaceAction result = ServerPlaceRecipe.placeRecipe(
                     menu, gridWidth, gridHeight, inputGridSlots, slotsToClear, synthetic.inventory, recipe, useMaxItems, isCreative
