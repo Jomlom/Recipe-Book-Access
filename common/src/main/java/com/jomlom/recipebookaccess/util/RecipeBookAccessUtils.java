@@ -6,6 +6,8 @@ import net.minecraft.world.entity.EntityEquipment;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.StackedItemContents;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.AbstractCraftingMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -28,6 +30,10 @@ public class RecipeBookAccessUtils {
         for (ItemStack itemStack : items) {
             recipeFinder.accountStack(itemStack);
         }
+    }
+
+    public static List<Slot> gridSlots(AbstractContainerMenu menu) {
+        return menu instanceof AbstractCraftingMenu craftingMenu ? craftingMenu.getInputGridSlots() : List.of();
     }
 
     public static SyntheticInventory buildSyntheticInventory(Player player, RecipeBookInventoryProvider customPop, RecipeHolder<?> recipe) {

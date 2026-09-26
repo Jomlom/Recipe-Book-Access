@@ -1,6 +1,7 @@
 package com.jomlom.recipebookaccess;
 
 import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
+import com.jomlom.recipebookaccess.util.RecipeBookAccessUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -8,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.AbstractCraftingMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import org.slf4j.Logger;
@@ -35,6 +37,11 @@ public class RecipeBookAccessCommon {
                     if (!stack.isEmpty()) {
                         items.add(stack.copy());
                     }
+                }
+            }
+            for (Slot slot : RecipeBookAccessUtils.gridSlots(handler)) {
+                if (slot.hasItem()) {
+                    items.add(slot.getItem().copy());
                 }
             }
         }
