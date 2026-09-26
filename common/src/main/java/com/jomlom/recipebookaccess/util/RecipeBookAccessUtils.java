@@ -4,6 +4,8 @@ import com.jomlom.recipebookaccess.api.RecipeBookInventoryProvider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.StackedContents;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -16,6 +18,10 @@ public class RecipeBookAccessUtils {
 
     private static final Map<Slot, List<SlotOriginPortion>> originMap = new HashMap<>();
 
+    public static List<Slot> gridSlots(AbstractContainerMenu menu) {
+        return menu.slots.stream().filter(slot -> slot.container instanceof CraftingContainer).toList();
+    }
+
     public static void populateCustomRecipeFinder(StackedContents recipeFinder, RecipeBookInventoryProvider customPopulator) {
         for (Container inventory : customPopulator.getInventoriesForAutofill()) {
             for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -25,6 +31,7 @@ public class RecipeBookAccessUtils {
     }
 
     public static void populateCustomRecipeFinder(StackedContents recipeFinder, List<ItemStack> items) {
+        recipeFinder.clear();
         for (ItemStack itemStack : items) {
             recipeFinder.accountStack(itemStack);
         }
@@ -60,7 +67,7 @@ public class RecipeBookAccessUtils {
                 int removedCount = removedStack.getCount();
                 if (removedCount > 0) {
                     originMap.computeIfAbsent(slot, unused -> new ArrayList<>())
-                            .add(new SlotOriginPortion(inv, matchingIndex, removedCount));
+                            .add(new SlotOriginPortion(inv, matchingIndex, removedCount, removedStack.copyWithCount(1)));
                 }
 
                 if (slotStack.isEmpty()) {
@@ -100,6 +107,7 @@ public class RecipeBookAccessUtils {
 
         for (SlotOriginPortion portion : portions) {
             if (stack.isEmpty()) break;
+            if (!ItemStack.isSameItem(portion.item(), stack)) continue;
 
             ItemStack piece = stack.split(Math.min(portion.count(), stack.getCount()));
             returnToExactSlot(portion, piece);
@@ -127,23 +135,26 @@ public class RecipeBookAccessUtils {
         int toTransfer = Math.min(availableSpace, stack.getCount());
         if (exact.isEmpty()) {
             origin.container().setItem(origin.slotIndex(), stack.copyWithCount(toTransfer));
+            if (origin.container().getItem(origin.slotIndex()).isEmpty()) return;
         } else {
             exact.grow(toTransfer);
+            origin.container().setItem(origin.slotIndex(), exact);
         }
         stack.shrink(toTransfer);
     }
 
-    private record SlotOriginPortion(Container container, int slotIndex, int count) {}
+    private record SlotOriginPortion(Container container, int slotIndex, int count, ItemStack item) {}
 
     private static boolean insertStackIntoInventory(Container inv, ItemStack stack) {
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack invStack = inv.getItem(i);
-            if (!invStack.isEmpty() && ItemStack.isSameItemSameComponents(invStack, stack)) {
+            if (!invStack.isEmpty() && ItemStack.isSameItemSameComponents(invStack, stack) && inv.canPlaceItem(i, stack)) {
                 int maxStackSize = Math.min(invStack.getMaxStackSize(), stack.getMaxStackSize());
                 int availableSpace = maxStackSize - invStack.getCount();
                 if (availableSpace > 0) {
                     int toTransfer = Math.min(availableSpace, stack.getCount());
                     invStack.grow(toTransfer);
+                    inv.setItem(i, invStack);
                     stack.shrink(toTransfer);
                     if (stack.isEmpty()) {
                         return true;
@@ -153,7 +164,7 @@ public class RecipeBookAccessUtils {
         }
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack invStack = inv.getItem(i);
-            if (invStack.isEmpty()) {
+            if (invStack.isEmpty() && inv.canPlaceItem(i, stack)) {
                 inv.setItem(i, stack.copy());
                 stack.setCount(0);
                 return true;
