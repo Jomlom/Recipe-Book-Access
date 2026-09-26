@@ -31,7 +31,7 @@ public class RecipeBookAccessNeoForge {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer serverPlayer) {
                     List<ItemStack> items = RecipeBookAccessCommon.collectAutofillItems(serverPlayer);
-                    context.reply(new CustomItemsPayload(items));
+                    context.reply(new CustomItemsPayload(items, RecipeBookAccessCommon.isActive(serverPlayer)));
                 }
             });
         });
