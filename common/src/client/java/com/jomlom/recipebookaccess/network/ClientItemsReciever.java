@@ -15,6 +15,10 @@ public class ClientItemsReciever {
         onUpdate = callback;
     }
 
+    public static boolean hasOnUpdate() {
+        return onUpdate != null;
+    }
+
     public static void clearOnUpdate() {
         onUpdate = null;
     }
