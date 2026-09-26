@@ -9,13 +9,19 @@ import java.util.stream.Collectors;
 
 public class CustomItemsPayload {
     private final List<ItemStack> itemStacks;
+    private final boolean active;
 
     public static final ResourceLocation ID = NetworkConstants.ITEMS_PACKET_ID;
 
-    public CustomItemsPayload(List<ItemStack> itemStacks) {
+    public CustomItemsPayload(List<ItemStack> itemStacks, boolean active) {
         this.itemStacks = itemStacks.stream()
                 .filter(stack -> !stack.isEmpty())
                 .collect(Collectors.toList());
+        this.active = active;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 
     public List<ItemStack> getItemStacks() {
@@ -27,6 +33,7 @@ public class CustomItemsPayload {
         for (ItemStack stack : payload.itemStacks) {
             buf.writeItem(stack);
         }
+        buf.writeBoolean(payload.active);
     }
 
     public static CustomItemsPayload decode(FriendlyByteBuf buf) {
@@ -35,6 +42,6 @@ public class CustomItemsPayload {
         for (int i = 0; i < size; i++) {
             stacks.add(buf.readItem());
         }
-        return new CustomItemsPayload(stacks);
+        return new CustomItemsPayload(stacks, buf.readBoolean());
     }
 }

@@ -21,7 +21,7 @@ public class RecipeBookAccessFabric implements ModInitializer {
 			server.execute(() -> {
 				List<ItemStack> items = RecipeBookAccessCommon.collectAutofillItems(player);
 				FriendlyByteBuf response = PacketByteBufs.create();
-				CustomItemsPayload.encode(new CustomItemsPayload(items), response);
+				CustomItemsPayload.encode(new CustomItemsPayload(items, RecipeBookAccessCommon.isActive(player)), response);
 				ServerPlayNetworking.send(player, CustomItemsPayload.ID, response);
 			});
 		});

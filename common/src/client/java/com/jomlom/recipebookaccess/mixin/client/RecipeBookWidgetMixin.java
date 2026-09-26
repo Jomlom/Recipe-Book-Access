@@ -12,12 +12,23 @@ import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
 @Mixin(RecipeBookComponent.class)
 public abstract class RecipeBookWidgetMixin {
+
+	@Inject(method = "updateStackedContents", at = @At("HEAD"), cancellable = true)
+	private void deferToServerSnapshot(CallbackInfo ci) {
+		RecipeBookMenu handler = ((RecipeBookWidgetAccessor)(Object)this).getCraftingScreenHandler();
+		if (handler instanceof RecipeBookInventoryProvider && ClientItemsReciever.hasOnUpdate()) {
+			ClientServices.NETWORK.requestItems();
+			ci.cancel();
+		}
+	}
 
 	@Redirect(
 			method = "updateStackedContents",
@@ -41,6 +52,35 @@ public abstract class RecipeBookWidgetMixin {
 		redirect(inventory, recipeFinder);
 	}
 
+	@Redirect(
+			method = "updateStackedContents",
+			at = @At(
+					value = "INVOKE",
+					target = "Lnet/minecraft/world/inventory/RecipeBookMenu;fillCraftSlotsStackedContents(Lnet/minecraft/world/entity/player/StackedContents;)V"
+			)
+	)
+	private void redirectFillCraftSlotsRefresh(RecipeBookMenu handler, StackedContents recipeFinder) {
+		fillCraftSlots(handler, recipeFinder);
+	}
+
+	@Redirect(
+			method = "initVisuals",
+			at = @At(
+					value = "INVOKE",
+					target = "Lnet/minecraft/world/inventory/RecipeBookMenu;fillCraftSlotsStackedContents(Lnet/minecraft/world/entity/player/StackedContents;)V"
+			)
+	)
+	private void redirectFillCraftSlotsReset(RecipeBookMenu handler, StackedContents recipeFinder) {
+		fillCraftSlots(handler, recipeFinder);
+	}
+
+	@Unique
+	private void fillCraftSlots(RecipeBookMenu handler, StackedContents recipeFinder) {
+		if (!(handler instanceof RecipeBookInventoryProvider) || RecipeBookAccessUtils.gridSlots(handler).isEmpty()) {
+			handler.fillCraftSlotsStackedContents(recipeFinder);
+		}
+	}
+
 	@Unique
 	private void redirect(Inventory inventory, StackedContents recipeFinder) {
 		RecipeBookComponent widget = (RecipeBookComponent)(Object)this;
@@ -49,17 +89,15 @@ public abstract class RecipeBookWidgetMixin {
 				((RecipeBookWidgetAccessor)widget).getCraftingScreenHandler();
 
 		if (handler instanceof RecipeBookInventoryProvider) {
-			if (ClientItemsReciever.isRequestPending()) {
-				RecipeBookAccessUtils.populateCustomRecipeFinder(recipeFinder, ClientItemsReciever.getItemStacks());
-				return;
-			}
+			RecipeBookAccessUtils.populateCustomRecipeFinder(recipeFinder, ClientItemsReciever.getItemStacks());
 
-			ClientServices.NETWORK.requestItems();
 			ClientItemsReciever.setOnUpdate(() -> {
 				List<ItemStack> updatedItems = ClientItemsReciever.getItemStacks();
 				RecipeBookAccessUtils.populateCustomRecipeFinder(recipeFinder, updatedItems);
 				widget.recipesUpdated();
 			});
+
+			ClientServices.NETWORK.requestItems();
 		} else {
 			inventory.fillStackedContents(recipeFinder);
 		}

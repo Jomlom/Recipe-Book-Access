@@ -33,6 +33,7 @@ public class RecipeBookAccessNeoForge {
 
     public RecipeBookAccessNeoForge() {
         FMLJavaModLoadingContext.get().getModEventBus();
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> RecipeBookAccessNeoForgeClient::registerTick);
 
         int id = 0;
         CHANNEL.registerMessage(id++, RequestItemsPayload.class, RequestItemsPayload::encode, RequestItemsPayload::decode, this::handleRequestItems);
@@ -46,7 +47,7 @@ public class RecipeBookAccessNeoForge {
             ServerPlayer player = ctx.getSender();
             if (player != null) {
                 List<ItemStack> items = RecipeBookAccessCommon.collectAutofillItems(player);
-                CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new CustomItemsPayload(items));
+                CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new CustomItemsPayload(items, RecipeBookAccessCommon.isActive(player)));
             }
         });
         ctx.setPacketHandled(true);
