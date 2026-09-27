@@ -44,6 +44,8 @@ public class RecipeBookAccessNeoForge {
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
             RecipeBookAccessNeoForgeClient.registerClientPayloads(registrar);
+        } else {
+            registrar.playToClient(CustomItemsPayload.ID, CustomItemsPayload.CODEC, (payload, context) -> {});
         }
     }
 }
